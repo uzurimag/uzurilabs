@@ -58,7 +58,7 @@ Copy `.env.example` to `.env.local` and fill in real values. `.env.local` (and a
 
 ## Supabase
 
-The app is connected to a Supabase project at the client level (`services/supabase/client.ts` for Browser/Client Components, `services/supabase/server.ts` for Server Components and Server Actions). No authentication, database tables, or RLS policies are implemented yet — that is deliberately out of scope for this ticket.
+The app is connected to a Supabase project at the client level (`services/supabase/client.ts` for Browser/Client Components, `services/supabase/server.ts` for Server Components and Server Actions, `services/supabase/proxy.ts` for session refresh in `proxy.ts`). Email/password authentication is implemented (see "Authentication" below); RBAC, invitations, and organization onboarding are not yet.
 
 ### Get your project values
 
@@ -95,8 +95,13 @@ Open [http://localhost:3000/dev/supabase-check](http://localhost:3000/dev/supaba
 - whether `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are configured
 - whether the server Supabase client initializes
 - whether the browser Supabase client initializes
+- whether a real, unauthenticated request actually reaches the configured Supabase project (`Connection successful` / `Connection failed`, plus a sanitized error category such as `network` or `configuration` — never a key, token, or raw error message)
 
 This route 404s when `NODE_ENV=production` and should be deleted once the Supabase integration is further along.
+
+## Authentication
+
+Email/password sign-in, sign-out, and password recovery are implemented (`/login`, `/forgot-password`, `/reset-password`, `/auth/callback`, `/auth/error`, and a minimal protected `/dashboard` placeholder). Public self-registration does not exist — accounts are created manually in the Supabase dashboard (invitation-only). See `docs/auth/ENG-002-authentication-and-sessions.md` for the full design and `docs/auth/ENG-002-testing-runbook.md` to configure and test it against a real Supabase project.
 
 ## Deploying
 

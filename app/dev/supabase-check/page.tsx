@@ -1,9 +1,17 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/services/supabase/server";
 import { BrowserCheck } from "./browser-check";
+import { checkSupabaseConnection } from "./check-connection";
 
 export const metadata = {
   title: "Supabase connection check",
+};
+
+const ERROR_CATEGORY_LABELS = {
+  configuration: "configuration",
+  network: "network",
+  timeout: "timeout",
+  unknown: "unknown",
 };
 
 export default async function SupabaseCheckPage() {
@@ -24,6 +32,12 @@ export default async function SupabaseCheckPage() {
     serverClientOk = false;
   }
 
+  const connection = serverClientOk
+    ? await checkSupabaseConnection().catch(
+        () => ({ status: "failed", category: "unknown" }) as const,
+      )
+    : ({ status: "failed", category: "configuration" } as const);
+
   return (
     <main className="mx-auto max-w-xl p-8 font-sans">
       <h1 className="text-xl font-semibold">Supabase connection check</h1>
@@ -41,6 +55,12 @@ export default async function SupabaseCheckPage() {
         </li>
         <li>{serverClientOk ? "✅" : "❌"} Server client initializes</li>
         <BrowserCheck />
+        <li>
+          {connection.status === "success" ? "✅" : "❌"} Connection{" "}
+          {connection.status === "success" ? "successful" : "failed"}
+          {connection.status === "failed" &&
+            ` (reason: ${ERROR_CATEGORY_LABELS[connection.category]})`}
+        </li>
       </ul>
     </main>
   );
