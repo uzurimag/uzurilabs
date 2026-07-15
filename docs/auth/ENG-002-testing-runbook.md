@@ -16,6 +16,8 @@ In the **development** project only (see `docs/auth/ENG-002-authentication-and-s
 - **Authentication → URL Configuration → Site URL:** `http://localhost:3000`
 - **Authentication → URL Configuration → Redirect URLs:** add `http://localhost:3000/auth/callback`
 
+If you're also verifying the live production fix (ENG-002A), see `docs/auth/ENG-002A-password-recovery-redirect-fix.md` for the separate, production-only dashboard step (`https://uzurilabs-platform-zeta.vercel.app/auth/callback` must be in the **production** project's Redirect URLs) — that step is required for the production email link to work and cannot be verified from this session.
+
 ## 2. Create a synthetic development test user
 
 **Supabase Dashboard → Authentication → Users → Add user.** Use a synthetic email (e.g. `eng002-test@example.test`), a password only you know, and confirm the email immediately in the dialog (so you don't need a working email inbox for this first pass). Never use the Founder's real email here.

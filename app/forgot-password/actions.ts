@@ -2,6 +2,7 @@
 
 import { createClient } from "@/services/supabase/server";
 import { isValidEmail, normalizeEmail } from "@/lib/auth-validation";
+import { getAppUrl } from "@/lib/app-url";
 
 export type ForgotPasswordState = {
   message: string;
@@ -33,7 +34,7 @@ export async function requestPasswordReset(
     return { message: INVALID_EMAIL_MESSAGE, tone: "error" };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${appUrl}/auth/callback?next=/reset-password`,

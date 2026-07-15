@@ -1,6 +1,7 @@
 # ENG-002 — Authentication and Session Management
 
 Testing/execution runbook against the real UZURI Development Supabase project: `docs/auth/ENG-002-testing-runbook.md`
+Production password-recovery redirect incident and fix: `docs/auth/ENG-002A-password-recovery-redirect-fix.md`
 
 ## ARCH-000 status
 
@@ -66,7 +67,7 @@ Both layers were exercised locally (see "Testing procedure").
 
 ## Password-reset flow
 
-1. `/forgot-password` collects an email and calls `requestPasswordReset` (`app/forgot-password/actions.ts`), which validates the email format itself, then calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: '<app-url>/auth/callback?next=/reset-password' })`.
+1. `/forgot-password` collects an email and calls `requestPasswordReset` (`app/forgot-password/actions.ts`), which validates the email format itself, then calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: '<app-url>/auth/callback?next=/reset-password' })`, where `<app-url>` comes from `lib/app-url.ts`'s `getAppUrl()` — the exact deployed production origin when `NODE_ENV === "production"`, unconditionally (not dependent on an env var being configured correctly in the deployment; see `docs/auth/ENG-002A-password-recovery-redirect-fix.md` for why that distinction matters), or `NEXT_PUBLIC_APP_URL` (falling back to `http://localhost:3000`) otherwise.
 2. Regardless of whether the account exists, or whether the send happened to fail for a reason other than rate-limiting, the same neutral message is shown: _"If an account exists for that email, a password reset link has been sent."_ A `429` (rate-limited) response is the one exception — it gets its own message, since disclosing "you're sending too many requests" doesn't reveal account existence.
 3. Supabase's own `/recover` endpoint is itself designed not to reveal account existence (it responds success-shaped regardless), so this app-level neutrality is defense in depth, not the only thing preventing enumeration.
 4. Clicking the emailed link lands on `/auth/callback?code=...&next=/reset-password`, which exchanges the code for a (recovery) session and redirects to `/reset-password`.
@@ -87,12 +88,16 @@ Both layers were exercised locally (see "Testing procedure").
 
 ## Required Supabase dashboard settings
 
-To be configured manually by the Founder in the **development** Supabase project (not production):
+**Development project** (to be configured manually by the Founder):
 
 - **Site URL:** `http://localhost:3000`
 - **Redirect URLs** (Authentication → URL Configuration → Redirect URLs): `http://localhost:3000/auth/callback`
 
-Only one redirect URL is required: this implementation always routes both email-confirmation and password-recovery links through `/auth/callback` (with a `next` query param distinguishing the two), rather than pointing `resetPasswordForEmail`'s `redirectTo` directly at `/reset-password`. `/reset-password` itself is never used as a Supabase-configured redirect URL — it's only ever reached _through_ the callback.
+**Production project** (see `docs/auth/ENG-002A-password-recovery-redirect-fix.md` for the incident this addresses):
+
+- **Redirect URLs** must include: `https://uzurilabs-platform-zeta.vercel.app/auth/callback`
+
+In both cases only one redirect URL is required per environment: this implementation always routes both email-confirmation and password-recovery links through `/auth/callback` (with a `next` query param distinguishing the two), rather than pointing `resetPasswordForEmail`'s `redirectTo` directly at `/reset-password`. `/reset-password` itself is never used as a Supabase-configured redirect URL — it's only ever reached _through_ the callback. If the production project's Redirect URLs allow-list doesn't include the exact URL above, Supabase falls back to its Site URL (the production homepage) regardless of what the app sends — this was the actual root cause of the ENG-002A incident, and is a dashboard-only fix this session cannot make itself.
 
 No secret keys are referenced or required for this dashboard configuration step.
 
